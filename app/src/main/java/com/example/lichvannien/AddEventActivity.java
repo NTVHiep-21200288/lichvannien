@@ -29,9 +29,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Locale;
 
-public class AddEventActivity extends AppCompatActivity {
-
-    private TextView tvEventDate;
+public class AddEventActivity extends AppCompatActivity {    private TextView tvEventDate;
     private TextInputEditText edtEventTitle, edtStartTime, edtEndTime, edtEventNote;
     private AutoCompleteTextView actvEventType, actvReminder;
     private SwitchMaterial switchAllDay;
@@ -41,24 +39,42 @@ public class AddEventActivity extends AppCompatActivity {
     private Calendar selectedDate = Calendar.getInstance();
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
-    private NotificationHelper notificationHelper;    private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 1001;
+    private NotificationHelper notificationHelper;
+    private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 1001;
+    
+    // Biến lưu ID sự kiện nếu đang chỉnh sửa
+    private long editEventId = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_add_event);
-        
-        // Khởi tạo database helper
+          // Khởi tạo database helper
         dbHelper = new EventDbHelper(this);
-        
-        // Kiểm tra và yêu cầu quyền thông báo
+          // Kiểm tra và yêu cầu quyền thông báo
         checkNotificationPermission();
         
         initViews();
         
-        // Nhận dữ liệu ngày từ Intent
+        // Khởi tạo NotificationHelper
+        notificationHelper = new NotificationHelper(this);
+        
+        // Kiểm tra xem đây là tạo mới hay chỉnh sửa sự kiện
         Intent intent = getIntent();
-        if (intent != null && intent.hasExtra("YEAR")) {
+        if (intent != null && intent.hasExtra("EDIT_EVENT_ID")) {
+            editEventId = intent.getLongExtra("EDIT_EVENT_ID", -1);
+            if (editEventId != -1) {
+                // Lấy thông tin sự kiện cần chỉnh sửa
+                Event event = dbHelper.getEvent(editEventId);
+                if (event != null) {
+                    // Đổi tiêu đề cửa sổ
+                    setTitle("Sửa sự kiện");
+                    // Cập nhật UI với thông tin của sự kiện
+                    fillEventData(event);
+                }
+            }
+        } else if (intent != null && intent.hasExtra("YEAR")) {
+            // Nhận dữ liệu ngày từ Intent khi tạo mới sự kiện
             int year = intent.getIntExtra("YEAR", -1);
             int month = intent.getIntExtra("MONTH", -1);
             int day = intent.getIntExtra("DAY", -1);
@@ -66,14 +82,14 @@ public class AddEventActivity extends AppCompatActivity {
             if (year > 0 && month > 0 && day > 0) {
                 selectedDate.set(Calendar.YEAR, year);
                 selectedDate.set(Calendar.MONTH, month - 1); // Calendar tháng bắt đầu từ 0
-                selectedDate.set(Calendar.DAY_OF_MONTH, day);
-            }
+                selectedDate.set(Calendar.DAY_OF_MONTH, day);            }
         }
         
-        // Khởi tạo NotificationHelper
-        notificationHelper = new NotificationHelper(this);
+        if (editEventId == -1) {
+            // Chỉ thiết lập giá trị mặc định khi tạo mới sự kiện
+            setupInitialValues();
+        }
         
-        setupInitialValues();
         setupListeners();
         setupDropdowns();
     }
@@ -225,8 +241,7 @@ public class AddEventActivity extends AppCompatActivity {
                 selectedDate.get(Calendar.YEAR);
         
         tvEventDate.setText(formattedDate);
-    }
-      private void saveEvent() {
+    }      private void saveEvent() {
         // Kiểm tra tiêu đề rỗng
         String title = edtEventTitle.getText().toString().trim();
         if (title.isEmpty()) {
@@ -244,6 +259,11 @@ public class AddEventActivity extends AppCompatActivity {
         
         // Tạo đối tượng sự kiện
         Event event = new Event();
+        if (editEventId != -1) {
+            // Đang chỉnh sửa sự kiện đã tồn tại
+            event.setId(editEventId); 
+        }
+        
         event.setTitle(title);
         event.setEventType(eventType);
         event.setYear(selectedDate.get(Calendar.YEAR));
@@ -254,23 +274,50 @@ public class AddEventActivity extends AppCompatActivity {
         event.setAllDay(isAllDay);
         event.setReminder(reminder);
         event.setNote(note);
-          // Lưu sự kiện vào database
-        long eventId = dbHelper.addEvent(event);
         
-        if (eventId != -1) {
-            event.setId((int) eventId);
-            // Lên lịch thông báo cho sự kiện
-            notificationHelper.scheduleNotification(event, reminder);
+        boolean isSuccess;
+        if (editEventId != -1) {
+            // Cập nhật sự kiện đã tồn tại
+            int rowsAffected = dbHelper.updateEvent(event);
+            isSuccess = rowsAffected > 0;
+            
+            if (isSuccess) {
+                // Hủy thông báo cũ và đặt lại thông báo mới
+                notificationHelper.cancelNotification(event.getId());
+                notificationHelper.scheduleNotification(event, reminder);
+                
+                Toast.makeText(this, "Sự kiện đã được cập nhật", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Lỗi khi cập nhật sự kiện", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            // Thêm sự kiện mới
+            long eventId = dbHelper.addEvent(event);
+            isSuccess = eventId != -1;
+            
+            if (isSuccess) {
+                event.setId((int) eventId);
+                // Lên lịch thông báo cho sự kiện
+                notificationHelper.scheduleNotification(event, reminder);
+                Toast.makeText(this, "Sự kiện đã được thêm", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Lỗi khi lưu sự kiện", Toast.LENGTH_SHORT).show();
+            }
+        }        if (isSuccess) {
             // Set result và kết thúc Activity
             Intent resultIntent = new Intent();
-            resultIntent.putExtra("EVENT_ADDED", true);
+            if (editEventId != -1) {
+                // Đang chỉnh sửa sự kiện
+                resultIntent.putExtra("EVENT_UPDATED", true);
+            } else {
+                // Đang thêm sự kiện mới
+                resultIntent.putExtra("EVENT_ADDED", true);
+            }
             resultIntent.putExtra("YEAR", event.getYear());
             resultIntent.putExtra("MONTH", event.getMonth());
             resultIntent.putExtra("DAY", event.getDay());
             setResult(RESULT_OK, resultIntent);
             finish();
-        } else {
-            Toast.makeText(this, "Lỗi khi lưu sự kiện", Toast.LENGTH_SHORT).show();
         }
     }
     
@@ -297,5 +344,35 @@ public class AddEventActivity extends AppCompatActivity {
                 Toast.makeText(this, "Thông báo sẽ không hoạt động do không được cấp quyền", Toast.LENGTH_LONG).show();
             }
         }
+    }
+    
+    /**
+     * Điền thông tin sự kiện hiện có vào các trường UI khi chỉnh sửa
+     */
+    private void fillEventData(Event event) {
+        if (event == null) return;
+        
+        // Đặt ngày tháng
+        selectedDate.set(Calendar.YEAR, event.getYear());
+        selectedDate.set(Calendar.MONTH, event.getMonth() - 1); // Calendar tháng bắt đầu từ 0
+        selectedDate.set(Calendar.DAY_OF_MONTH, event.getDay());
+        updateDateDisplay();
+        
+        // Đặt các trường khác
+        edtEventTitle.setText(event.getTitle());
+        edtStartTime.setText(event.getStartTime());
+        edtEndTime.setText(event.getEndTime());
+        switchAllDay.setChecked(event.isAllDay());
+        edtEventNote.setText(event.getNote());
+        
+        // Cập nhật giờ bắt đầu/kết thúc theo trạng thái "cả ngày"
+        edtStartTime.setEnabled(!event.isAllDay());
+        edtEndTime.setEnabled(!event.isAllDay());
+        
+        // Đặt loại sự kiện
+        actvEventType.setText(event.getEventType(), false);
+        
+        // Đặt kiểu nhắc nhở
+        actvReminder.setText(event.getReminder(), false);
     }
 }

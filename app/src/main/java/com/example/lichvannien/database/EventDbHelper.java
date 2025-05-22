@@ -199,6 +199,43 @@ public class EventDbHelper extends SQLiteOpenHelper {
         return events;
     }
 
+    // Lấy một sự kiện theo ID
+    public Event getEvent(long id) {
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        Cursor cursor = db.query(
+                TABLE_EVENTS,
+                null,
+                COLUMN_ID + " = ?",
+                new String[]{String.valueOf(id)},
+                null,
+                null,
+                null
+        );
+
+        Event event = null;
+
+        if (cursor != null && cursor.moveToFirst()) {
+            event = new Event();
+            event.setId(cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_ID)));
+            event.setTitle(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TITLE)));
+            event.setEventType(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EVENT_TYPE)));
+            event.setYear(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_YEAR)));
+            event.setMonth(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_MONTH)));
+            event.setDay(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_DAY)));
+            event.setStartTime(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_START_TIME)));
+            event.setEndTime(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_END_TIME)));
+            event.setAllDay(cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ALL_DAY)) == 1);
+            event.setReminder(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_REMINDER)));
+            event.setNote(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NOTE)));
+
+            cursor.close();
+        }
+
+        db.close();
+        return event;
+    }
+
     // Cập nhật sự kiện
     public int updateEvent(Event event) {
         SQLiteDatabase db = this.getWritableDatabase();

@@ -26,6 +26,7 @@ import com.example.lichvannien.model.Event;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements CalendarAdapter.OnDayClickListener {    private static final int ADD_EVENT_REQUEST_CODE = 1001;
+    private static final int EDIT_EVENT_REQUEST_CODE = 1002;
     
     private CalendarViewModel viewModel;
     private CalendarAdapter calendarAdapter;
@@ -75,9 +76,7 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
         // Load current month
         Calendar today = Calendar.getInstance();
         viewModel.loadMonth(today.get(Calendar.YEAR), today.get(Calendar.MONTH) + 1);
-    }
-
-    private void showEventOptionsDialog(Event event) {
+    }    private void showEventOptionsDialog(Event event) {
         new androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle(event.getTitle())
             .setItems(new CharSequence[]{"Chỉnh sửa", "Xóa"}, (dialog, which) -> {
@@ -85,8 +84,8 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
                     // Chỉnh sửa sự kiện
                     Intent intent = new Intent(MainActivity.this, AddEventActivity.class);
                     intent.putExtra("EDIT_EVENT_ID", event.getId());
-                    // Có thể truyền thêm các thông tin khác nếu cần
-                    startActivity(intent);
+                    // Bắt đầu activity để chỉnh sửa và chờ kết quả
+                    startActivityForResult(intent, EDIT_EVENT_REQUEST_CODE);
                 } else if (which == 1) {
                     // Xóa sự kiện
                     new androidx.appcompat.app.AlertDialog.Builder(this)
@@ -100,6 +99,11 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
                             if (selectedDay != null) {
                                 loadEventsForSelectedDay(selectedDay.solarYear, selectedDay.solarMonth, selectedDay.solarDay);
                                 loadEventsForCurrentDay(selectedDay.solarYear, selectedDay.solarMonth, selectedDay.solarDay);
+                                // Cập nhật lại view cho tháng hiện tại
+                                CalendarMonth currentMonth = viewModel.getCurrentMonth().getValue();
+                                if (currentMonth != null) {
+                                    loadEventsForMonth(currentMonth.year, currentMonth.month);
+                                }
                             }
                         })
                         .setNegativeButton("Hủy", null)
@@ -334,39 +338,32 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
     }    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        
-        if (requestCode == ADD_EVENT_REQUEST_CODE && resultCode == RESULT_OK) {
-            if (data != null && data.getBooleanExtra("EVENT_ADDED", false)) {
-                // Lấy thông tin ngày của sự kiện vừa thêm
-                int year = data.getIntExtra("YEAR", -1);
-                int month = data.getIntExtra("MONTH", -1);
-                int day = data.getIntExtra("DAY", -1);
-                
-                if (year > 0 && month > 0 && day > 0) {
-                    // Thông báo thành công
-                    Toast.makeText(this, "Đã thêm sự kiện vào ngày " + day + "/" + month + "/" + year, Toast.LENGTH_SHORT).show();
-                    
-                    // Cập nhật lại tháng hiện tại để hiển thị các sự kiện mới
-                    CalendarMonth currentMonth = viewModel.getCurrentMonth().getValue();
-                    if (currentMonth != null) {
-                        loadEventsForMonth(currentMonth.year, currentMonth.month);
-                    }
-                    
-                    // Chọn ngày có sự kiện vừa thêm
-                    CalendarDay eventDay = CalendarDay.fromDate(year, month, day);
-                    viewModel.selectDay(eventDay);
-                      // Cập nhật danh sách sự kiện của ngày được chọn
-                    loadEventsForSelectedDay(year, month, day);
-                    
-                    // Cập nhật danh sách sự kiện hiện tại nếu sự kiện được thêm vào ngày hôm nay
-                    Calendar now = Calendar.getInstance();
-                    int todayYear = now.get(Calendar.YEAR);
-                    int todayMonth = now.get(Calendar.MONTH) + 1;
-                    int todayDay = now.get(Calendar.DAY_OF_MONTH);
-                    
-                    if (year == todayYear && month == todayMonth && day == todayDay) {
-                        loadEventsForCurrentDay(todayYear, todayMonth, todayDay);
-                    }
+
+        if (resultCode == RESULT_OK && data != null &&
+            (data.getBooleanExtra("EVENT_ADDED", false) || data.getBooleanExtra("EVENT_UPDATED", false))) {
+
+            int year = data.getIntExtra("YEAR", -1);
+            int month = data.getIntExtra("MONTH", -1);
+            int day = data.getIntExtra("DAY", -1);
+
+            if (year > 0 && month > 0 && day > 0) {
+                // Làm mới tháng
+                CalendarMonth currentMonth = viewModel.getCurrentMonth().getValue();
+                if (currentMonth != null) {
+                    loadEventsForMonth(currentMonth.year, currentMonth.month);
+                }
+                // Làm mới ngày được chọn
+                CalendarDay eventDay = CalendarDay.fromDate(year, month, day);
+                viewModel.selectDay(eventDay);
+                loadEventsForSelectedDay(year, month, day);
+
+                // Nếu là hôm nay thì làm mới luôn danh sách hôm nay
+                Calendar now = Calendar.getInstance();
+                int todayYear = now.get(Calendar.YEAR);
+                int todayMonth = now.get(Calendar.MONTH) + 1;
+                int todayDay = now.get(Calendar.DAY_OF_MONTH);
+                if (year == todayYear && month == todayMonth && day == todayDay) {
+                    loadEventsForCurrentDay(todayYear, todayMonth, todayDay);
                 }
             }
         }

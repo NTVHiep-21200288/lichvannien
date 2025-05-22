@@ -42,18 +42,39 @@ public class NotificationHelper {
             channel.setDescription(CHANNEL_DESCRIPTION);
             notificationManager.createNotificationChannel(channel);
         }
+    }    public void scheduleNotification(Event event, String reminderText) {
+        // Skip scheduling if reminder is "Không nhắc" (No reminder)
+        if ("Không nhắc".equals(reminderText)) {
+            return;
+        }
+        
+        // Lên lịch thông báo theo thời gian được chọn
+        scheduleReminderAtTime(event, reminderText);
+        
+        // Nếu đặt nhắc nhở trước thời gian sự kiện, thì cũng lên lịch thêm một thông báo khi sự kiện bắt đầu
+        if (!"Khi sự kiện diễn ra".equals(reminderText)) {
+            scheduleReminderAtTime(event, "Khi sự kiện diễn ra");
+        }
     }
-
-    public void scheduleNotification(Event event, String reminderText) {
+    
+    private void scheduleReminderAtTime(Event event, String reminderText) {
         Intent intent = new Intent(context, NotificationReceiver.class);
         intent.putExtra("eventId", event.getId());
         intent.putExtra("eventTitle", event.getTitle());
         intent.putExtra("eventDate", event.getDate());
         intent.putExtra("reminderText", reminderText);
+          // Add debug log to check what we're passing to the intent
+        android.util.Log.d("NotificationHelper", "Scheduling notification with reminderText: " + reminderText);
+
+        // Tạo requestCode khác nhau cho "Khi sự kiện diễn ra" và các thông báo khác
+        int requestCode = (int) event.getId();
+        if ("Khi sự kiện diễn ra".equals(reminderText)) {
+            requestCode = requestCode + 10000; // Thêm 10000 để tránh trùng với các requestCode khác
+        }
 
         PendingIntent pendingIntent = PendingIntent.getBroadcast(
                 context,
-                (int) event.getId(),
+                requestCode,
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
@@ -114,15 +135,52 @@ public class NotificationHelper {
                     pendingIntent
             );
         }
-    }
-
-    public void showNotification(int eventId, String title, long eventDate, String reminderText) {
+    }    public void showNotification(int eventId, String title, String eventDate, String reminderText) {
         android.app.Notification notification;
-        if ("Khi sự kiện diễn ra".equals(reminderText)) {
+        
+        // Add debug log to verify the reminderText at notification time
+        android.util.Log.d("NotificationHelper", "showNotification: eventId=" + eventId + 
+                ", title=" + title + ", reminderText='" + reminderText + "'");
+        
+        // Check for exact match "Khi sự kiện diễn ra" for ongoing events
+        if (reminderText != null && reminderText.equals("Khi sự kiện diễn ra")) {
+            android.util.Log.d("NotificationHelper", "Using OngoingEventNotification");
             notification = OngoingEventNotification.build(context, title);
         } else {
+            android.util.Log.d("NotificationHelper", "Using UpcomingEventNotification");
             notification = UpcomingEventNotification.build(context, title);
         }
         notificationManager.notify(eventId, notification);
+    }
+
+    /**
+     * Hủy thông báo hiện tại cho một sự kiện
+     * @param eventId ID của sự kiện
+     */
+    public void cancelNotification(long eventId) {
+        // Hủy thông báo thông thường
+        Intent intent = new Intent(context, NotificationReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                context,
+                (int) eventId,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+        
+        // Hủy thông báo "Khi sự kiện diễn ra" (có requestCode khác)
+        Intent ongoingIntent = new Intent(context, NotificationReceiver.class);
+        PendingIntent ongoingPendingIntent = PendingIntent.getBroadcast(
+                context,
+                (int) eventId + 10000, // như đã thêm trong requestCode đặc biệt
+                ongoingIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+        
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        alarmManager.cancel(pendingIntent);
+        alarmManager.cancel(ongoingPendingIntent);
+        
+        // Xóa thông báo hiện tại nếu đang hiển thị
+        notificationManager.cancel((int) eventId);
     }
 }
