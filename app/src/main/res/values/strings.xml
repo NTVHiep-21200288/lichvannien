@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Lịch Vạn Niên</string>
+
+    <!-- Navigation -->
+    <string name="previous_month">Tháng trước</string>
+    <string name="next_month">Tháng sau</string>
+    <string name="today">Hôm nay</string>
+
+    <!-- Days of Week -->
+    <string name="sunday">CN</string>
+    <string name="monday">T2</string>
+    <string name="tuesday">T3</string>
+    <string name="wednesday">T4</string>
+    <string name="thursday">T5</string>
+    <string name="friday">T6</string>
+    <string name="saturday">T7</string>
+
+    <!-- Days of Week Full -->
+    <string name="sunday_full">Chủ nhật</string>
+    <string name="monday_full">Thứ hai</string>
+    <string name="tuesday_full">Thứ ba</string>
+    <string name="wednesday_full">Thứ tư</string>
+    <string name="thursday_full">Thứ năm</string>
+    <string name="friday_full">Thứ sáu</string>
+    <string name="saturday_full">Thứ bảy</string>
+
+    <!-- Months -->
+    <string name="january">Tháng 1</string>
+    <string name="february">Tháng 2</string>
+    <string name="march">Tháng 3</string>
+    <string name="april">Tháng 4</string>
+    <string name="may">Tháng 5</string>
+    <string name="june">Tháng 6</string>
+    <string name="july">Tháng 7</string>
+    <string name="august">Tháng 8</string>
+    <string name="september">Tháng 9</string>
+    <string name="october">Tháng 10</string>
+    <string name="november">Tháng 11</string>
+    <string name="december">Tháng 12</string>
+
+    <!-- Calendar Info -->
+    <string name="lunar_date">Âm lịch</string>
+    <string name="solar_date">Dương lịch</string>
+    <string name="can_chi">Can Chi</string>
+    <string name="tiet_khi">Tiết khí</string>
+    <string name="holiday">Lễ</string>
+    <string name="leap_month">Tháng nhuận</string>
+
+    <!-- Messages -->
+    <string name="select_date_message">Chọn một ngày để xem thông tin chi tiết</string>
+    <string name="current_time">Thời gian hiện tại</string>
+    <string name="loading">Đang tải...</string>
+    <string name="error_loading">Lỗi khi tải dữ liệu</string>
+
+    <!-- Holidays -->
+    <string name="new_year">Tết Dương lịch</string>
+    <string name="valentine">Lễ tình nhân</string>
+    <string name="women_day">Quốc tế Phụ nữ</string>
+    <string name="liberation_day">Giải phóng miền Nam</string>
+    <string name="labor_day">Quốc tế Lao động</string>
+    <string name="children_day">Quốc tế Thiếu nhi</string>
+    <string name="independence_day">Quốc khánh</string>
+    <string name="vietnam_women_day">Ngày Phụ nữ Việt Nam</string>
+    <string name="teacher_day">Ngày Nhà giáo Việt Nam</string>
+    <string name="christmas">Lễ Giáng sinh</string>
+
+    <!-- Lunar Holidays -->
+    <string name="tet_nguyen_dan">Tết Nguyên đán</string>
+    <string name="ram_thang_gieng">Rằm tháng Giêng</string>
+    <string name="tet_han_thuc">Tết Hàn thực</string>
+    <string name="phat_dan">Phật đản</string>
+    <string name="tet_doan_ngo">Tết Đoan ngọ</string>
+    <string name="le_vu_lan">Lễ Vu lan</string>
+    <string name="tet_trung_thu">Tết Trung thu</string>
+    <string name="tet_that_tich">Tết Thất tịch</string>
+    <string name="ong_tao_chau_troi">Ông Táo chầu trời</string>
+
+    <!-- Content Descriptions -->
+    <string name="cd_previous_month">Tháng trước</string>
+    <string name="cd_next_month">Tháng sau</string>
+    <string name="cd_today_button">Về hôm nay</string>
+    <string name="cd_holiday_indicator">Chỉ báo ngày lễ</string>
+    <string name="cd_calendar_day">Ngày trong lịch</string>
+</resources>
