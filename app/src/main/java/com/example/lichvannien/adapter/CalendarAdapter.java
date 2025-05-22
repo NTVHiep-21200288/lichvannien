@@ -1,5 +1,6 @@
 package com.example.lichvannien.adapter;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,6 +17,7 @@ import java.util.List;
 
 public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.CalendarDayViewHolder> {
 
+    private static final String TAG = "CalendarAdapter";
     private List<CalendarDay> calendarDays = new ArrayList<>();
     private CalendarDay selectedDay;
     private OnDayClickListener onDayClickListener;
@@ -29,7 +31,8 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.Calend
     }
 
     public void updateData(List<CalendarDay> newDays) {
-        this.calendarDays = newDays;
+        Log.d(TAG, "updateData called with " + (newDays != null ? newDays.size() : 0) + " days");
+        this.calendarDays = newDays != null ? new ArrayList<>(newDays) : new ArrayList<>();
         notifyDataSetChanged();
     }
 
@@ -48,8 +51,12 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.Calend
 
     @Override
     public void onBindViewHolder(@NonNull CalendarDayViewHolder holder, int position) {
-        CalendarDay day = calendarDays.get(position);
-        holder.bind(day, position);
+        if (position < calendarDays.size()) {
+            CalendarDay day = calendarDays.get(position);
+            if (day != null) {
+                holder.bind(day, position);
+            }
+        }
     }
 
     @Override
@@ -71,91 +78,151 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.Calend
 
         public CalendarDayViewHolder(@NonNull View itemView) {
             super(itemView);
+
+            // Tìm các view components
             cardView = (CardView) itemView;
+            if (cardView == null) {
+                cardView = (CardView) itemView; // Fallback nếu không tìm thấy ID
+            }
             tvSolarDay = itemView.findViewById(R.id.tvSolarDay);
             tvLunarDay = itemView.findViewById(R.id.tvLunarDay);
             tvCanChi = itemView.findViewById(R.id.tvCanChi);
             viewHolidayIndicator = itemView.findViewById(R.id.viewHolidayIndicator);
 
+            // Set click listener
             itemView.setOnClickListener(v -> {
                 int position = getAdapterPosition();
-                if (position != RecyclerView.NO_POSITION) {
+                if (position != RecyclerView.NO_POSITION && position < calendarDays.size()) {
                     CalendarDay day = calendarDays.get(position);
-                    selectedDay = day;
-                    if (onDayClickListener != null) {
-                        onDayClickListener.onDayClick(day);
+                    if (day != null) {
+                        selectedDay = day;
+                        if (onDayClickListener != null) {
+                            onDayClickListener.onDayClick(day);
+                        }
+                        notifyDataSetChanged();
                     }
-                    notifyDataSetChanged();
                 }
             });
         }
 
         public void bind(CalendarDay day, int position) {
-            tvSolarDay.setText(String.valueOf(day.solarDay));
-            tvLunarDay.setText(String.valueOf(day.lunarDay));
+            if (day == null) return;
 
-            // Set solar day color based on day type
-            if (day.isToday) {
-                tvSolarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.white));
-                cardView.setCardBackgroundColor(ContextCompat.getColor(itemView.getContext(), R.color.today_color));
-            } else if (!day.isCurrentMonth) {
-                tvSolarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_disabled));
-                tvLunarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_disabled));
-                cardView.setCardBackgroundColor(ContextCompat.getColor(itemView.getContext(), R.color.background_disabled));
-            } else if (day.isHoliday) {
-                tvSolarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.holiday_color));
-                cardView.setCardBackgroundColor(ContextCompat.getColor(itemView.getContext(), android.R.color.white));
-            } else if (day.equals(selectedDay)) {
-                tvSolarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.white));
-                cardView.setCardBackgroundColor(ContextCompat.getColor(itemView.getContext(), R.color.selected_color));
-            } else {
-                // Check if it's Sunday or Saturday
-                int dayOfWeek = position % 7;
-                if (dayOfWeek == 0) { // Sunday
-                    tvSolarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.sunday_color));
-                } else if (dayOfWeek == 6) { // Saturday
-                    tvSolarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.saturday_color));
-                } else {
-                    tvSolarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_primary));
+            try {
+                // Hiển thị ngày dương
+                if (tvSolarDay != null) {
+                    tvSolarDay.setText(String.valueOf(day.solarDay));
                 }
+
+                // Hiển thị ngày âm
+                if (tvLunarDay != null) {
+                    if (day.lunarDay == 1 && day.lunarMonth == 1) {
+                        tvLunarDay.setText("TẾT");
+                    } else {
+                        tvLunarDay.setText(String.valueOf(day.lunarDay));
+                    }
+                }
+
+                // Thiết lập màu sắc cho ngày dương
+                setDayColors(day, position);
+
+                // Hiển thị indicator cho ngày lễ
+                setHolidayIndicator(day);
+
+                // Hiển thị Can Chi cho ngày đặc biệt
+                setCanChiDisplay(day);
+
+            } catch (Exception e) {
+                Log.e(TAG, "Error binding day: " + e.getMessage());
+            }
+        }
+
+        private void setDayColors(CalendarDay day, int position) {
+            if (tvSolarDay == null || tvLunarDay == null || cardView == null) return;
+
+            try {
+                if (day.isToday) {
+                    // Ngày hôm nay - màu đỏ với nền trắng
+                    tvSolarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.white));
+                    tvLunarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.white));
+                    cardView.setCardBackgroundColor(ContextCompat.getColor(itemView.getContext(), android.R.color.holo_red_dark));
+                } else if (!day.isCurrentMonth) {
+                    // Ngày không thuộc tháng hiện tại - màu xám nhạt
+                    tvSolarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.darker_gray));
+                    tvLunarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.darker_gray));
+                    cardView.setCardBackgroundColor(ContextCompat.getColor(itemView.getContext(), android.R.color.white));
+                } else if (day.equals(selectedDay)) {
+                    // Ngày được chọn - màu xanh với nền
+                    tvSolarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.white));
+                    tvLunarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.white));
+                    cardView.setCardBackgroundColor(ContextCompat.getColor(itemView.getContext(), android.R.color.holo_blue_dark));
+                } else if (day.isHoliday) {
+                    // Ngày lễ - màu đỏ
+                    tvSolarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.holo_red_dark));
+                    tvLunarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.black));
+                    cardView.setCardBackgroundColor(ContextCompat.getColor(itemView.getContext(), android.R.color.white));
+                } else {
+                    // Ngày bình thường
+                    int dayOfWeek = position % 7;
+                    if (dayOfWeek == 0) {
+                        // Chủ nhật - màu đỏ
+                        tvSolarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.holo_red_dark));
+                    } else if (dayOfWeek == 6) {
+                        // Thứ 7 - màu xanh
+                        tvSolarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.holo_blue_dark));
+                    } else {
+                        // Các ngày trong tuần - màu đen
+                        tvSolarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.black));
+                    }
+                    tvLunarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.darker_gray));
+                    cardView.setCardBackgroundColor(ContextCompat.getColor(itemView.getContext(), android.R.color.white));
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error setting day colors: " + e.getMessage());
+                // Fallback màu sắc mặc định
+                tvSolarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.black));
+                tvLunarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.darker_gray));
                 cardView.setCardBackgroundColor(ContextCompat.getColor(itemView.getContext(), android.R.color.white));
             }
+        }
 
-            // Set lunar day color
-            if (!day.isCurrentMonth) {
-                tvLunarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_disabled));
-            } else if (day.isToday || day.equals(selectedDay)) {
-                tvLunarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.white));
-            } else {
-                tvLunarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_secondary));
-            }
+        private void setHolidayIndicator(CalendarDay day) {
+            if (viewHolidayIndicator == null) return;
 
-            // Show holiday indicator
-            if (day.isHoliday && day.isCurrentMonth) {
-                viewHolidayIndicator.setVisibility(View.VISIBLE);
-                viewHolidayIndicator.setBackground(ContextCompat.getDrawable(itemView.getContext(), R.drawable.circle_indicator));
-            } else {
+            try {
+                if (day.isHoliday && day.isCurrentMonth) {
+                    viewHolidayIndicator.setVisibility(View.VISIBLE);
+                    viewHolidayIndicator.setBackgroundColor(ContextCompat.getColor(itemView.getContext(), android.R.color.holo_red_dark));
+                } else {
+                    viewHolidayIndicator.setVisibility(View.GONE);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error setting holiday indicator: " + e.getMessage());
                 viewHolidayIndicator.setVisibility(View.GONE);
             }
+        }
 
-            // Show Can Chi for special days (1st and 15th of lunar month)
-            if (day.isCurrentMonth && (day.lunarDay == 1 || day.lunarDay == 15)) {
-                String[] canChiParts = day.canChi.split(" ");
-                tvCanChi.setText(canChiParts.length > 1 ? canChiParts[1] : day.canChi); // Only show Chi
-                tvCanChi.setVisibility(View.VISIBLE);
-                if (day.isToday || day.equals(selectedDay)) {
-                    tvCanChi.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.white));
+        private void setCanChiDisplay(CalendarDay day) {
+            if (tvCanChi == null) return;
+
+            try {
+                // Hiển thị Can Chi cho ngày 1 và 15 âm lịch
+                if (day.isCurrentMonth && (day.lunarDay == 1 || day.lunarDay == 15)) {
+                    String[] canChiParts = day.canChi.split(" ");
+                    tvCanChi.setText(canChiParts.length > 1 ? canChiParts[1] : day.canChi);
+                    tvCanChi.setVisibility(View.VISIBLE);
+
+                    if (day.isToday || day.equals(selectedDay)) {
+                        tvCanChi.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.white));
+                    } else {
+                        tvCanChi.setTextColor(ContextCompat.getColor(itemView.getContext(), android.R.color.holo_orange_dark));
+                    }
                 } else {
-                    tvCanChi.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.accent_color));
+                    tvCanChi.setVisibility(View.GONE);
                 }
-            } else {
+            } catch (Exception e) {
+                Log.e(TAG, "Error setting Can Chi display: " + e.getMessage());
                 tvCanChi.setVisibility(View.GONE);
-            }
-
-            // Special formatting for lunar new year
-            if (day.lunarDay == 1 && day.lunarMonth == 1) {
-                tvLunarDay.setText("TẾT");
-                tvLunarDay.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.holiday_color));
             }
         }
     }

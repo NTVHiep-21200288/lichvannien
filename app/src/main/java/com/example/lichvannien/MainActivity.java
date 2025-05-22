@@ -29,7 +29,6 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
     private TextView tvCurrentDate;
     private TextView tvLunarDate;
     private TextView tvCanChi;
-    private TextView tvTietKhi;
     private TextView tvMonthYear;
     private TextView tvSelectedDate;
     private TextView tvSelectedLunar;
@@ -60,7 +59,6 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
         tvCurrentDate = findViewById(R.id.tvCurrentDate);
         tvLunarDate = findViewById(R.id.tvLunarDate);
         tvCanChi = findViewById(R.id.tvCanChi);
-        tvTietKhi = findViewById(R.id.tvTietKhi);
         tvMonthYear = findViewById(R.id.tvMonthYear);
         tvSelectedDate = findViewById(R.id.tvSelectedDate);
         tvSelectedLunar = findViewById(R.id.tvSelectedLunar);
@@ -81,8 +79,11 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
 
     private void onMonthChanged(CalendarMonth calendarMonth) {
         if (calendarMonth != null) {
+            android.util.Log.d("MainActivity", "Month changed: " + calendarMonth.month + "/" + calendarMonth.year + " with " + calendarMonth.days.size() + " days");
             calendarAdapter.updateData(calendarMonth.days);
             updateMonthYearDisplay(calendarMonth.year, calendarMonth.month);
+        } else {
+            android.util.Log.e("MainActivity", "CalendarMonth is null");
         }
     }
 
@@ -151,15 +152,6 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
         String canChiDay = LunarCalendarUtil.getCanChiDay(lunarDate.jd);
         tvCanChi.setText("Ngày " + canChiDay);
 
-        // Get Tiet Khi
-        String tietKhi = LunarCalendarUtil.getTietKhi(month, day);
-        if (tietKhi != null) {
-            tvTietKhi.setText("Tiết khí: " + tietKhi);
-            tvTietKhi.setVisibility(View.VISIBLE);
-        } else {
-            tvTietKhi.setVisibility(View.GONE);
-        }
-
         // Get hour Can Chi
         int hour = now.get(Calendar.HOUR_OF_DAY);
         String hourCanChi = LunarCalendarUtil.getHourCanChi(hour, canChiDay);
@@ -210,16 +202,6 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
             tvSelectedHoliday.setVisibility(View.VISIBLE);
         } else {
             tvSelectedHoliday.setVisibility(View.GONE);
-        }
-
-        // Tiet Khi info
-        if (day.tietKhi != null) {
-            if (tvSelectedHoliday.getVisibility() == View.VISIBLE) {
-                tvSelectedHoliday.setText(tvSelectedHoliday.getText() + "\n🌸 Tiết khí: " + day.tietKhi);
-            } else {
-                tvSelectedHoliday.setText("🌸 Tiết khí: " + day.tietKhi);
-                tvSelectedHoliday.setVisibility(View.VISIBLE);
-            }
         }
     }
 

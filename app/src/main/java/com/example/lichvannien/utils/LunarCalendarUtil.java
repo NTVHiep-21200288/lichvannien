@@ -4,13 +4,6 @@ public class LunarCalendarUtil {
 
     private static final String[] CAN = {"Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý"};
     private static final String[] CHI = {"Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"};
-    private static final String[] TIET_KHI = {
-            "Xuân phân", "Thanh minh", "Cốc vũ", "Lập hạ", "Tiểu mãn", "Mang chủng",
-            "Hạ chí", "Tiểu thử", "Đại thử", "Lập thu", "Xử thử", "Bạch lộ",
-            "Thu phân", "Hàn lộ", "Sương giáng", "Lập đông", "Tiểu tuyết", "Đại tuyết",
-            "Đông chí", "Tiểu hàn", "Đại hàn", "Lập xuân", "Vũ thủy", "Kinh trập"
-    };
-
     private static final String[] CHI_HOUR = {"Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"};
 
     public static class LunarDate {
@@ -192,61 +185,5 @@ public class LunarCalendarUtil {
 
         int hourCanIndex = (dayCanIndex * 2 + hourChiIndex) % 10;
         return CAN[hourCanIndex] + " " + CHI_HOUR[hourChiIndex];
-    }
-
-    public static String getTietKhi(int month, int day) {
-        Integer tietKhiIndex = null;
-
-        switch (month) {
-            case 3:
-                if (day >= 20) tietKhiIndex = 0;
-                break;
-            case 4:
-                if (day >= 5) tietKhiIndex = 1;
-                else if (day >= 20) tietKhiIndex = 2;
-                break;
-            case 5:
-                if (day >= 5) tietKhiIndex = 3;
-                else if (day >= 21) tietKhiIndex = 4;
-                break;
-            case 6:
-                if (day >= 6) tietKhiIndex = 5;
-                else if (day >= 21) tietKhiIndex = 6;
-                break;
-            case 7:
-                if (day >= 7) tietKhiIndex = 7;
-                else if (day >= 23) tietKhiIndex = 8;
-                break;
-            case 8:
-                if (day >= 8) tietKhiIndex = 9;
-                else if (day >= 23) tietKhiIndex = 10;
-                break;
-            case 9:
-                if (day >= 8) tietKhiIndex = 11;
-                else if (day >= 23) tietKhiIndex = 12;
-                break;
-            case 10:
-                if (day >= 8) tietKhiIndex = 13;
-                else if (day >= 24) tietKhiIndex = 14;
-                break;
-            case 11:
-                if (day >= 7) tietKhiIndex = 15;
-                else if (day >= 22) tietKhiIndex = 16;
-                break;
-            case 12:
-                if (day >= 7) tietKhiIndex = 17;
-                else if (day >= 22) tietKhiIndex = 18;
-                break;
-            case 1:
-                if (day >= 6) tietKhiIndex = 19;
-                else if (day >= 20) tietKhiIndex = 20;
-                break;
-            case 2:
-                if (day >= 4) tietKhiIndex = 21;
-                else if (day >= 19) tietKhiIndex = 22;
-                break;
-        }
-
-        return tietKhiIndex != null ? TIET_KHI[tietKhiIndex] : null;
     }
 }

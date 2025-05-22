@@ -1,7 +1,6 @@
 package com.example.lichvannien.model;
 
 import com.example.lichvannien.utils.LunarCalendarUtil;
-
 import java.util.Calendar;
 
 public class CalendarDay {
@@ -14,7 +13,6 @@ public class CalendarDay {
     public boolean isLeapMonth;
     public String canChi;
     public String hourCanChi;
-    public String tietKhi;
     public boolean isToday;
     public boolean isCurrentMonth;
     public boolean isHoliday;
@@ -23,7 +21,7 @@ public class CalendarDay {
     public CalendarDay(int solarDay, int solarMonth, int solarYear,
                        int lunarDay, int lunarMonth, int lunarYear,
                        boolean isLeapMonth, String canChi, String hourCanChi,
-                       String tietKhi, boolean isToday, boolean isCurrentMonth,
+                       boolean isToday, boolean isCurrentMonth,
                        boolean isHoliday, String holidayName) {
         this.solarDay = solarDay;
         this.solarMonth = solarMonth;
@@ -32,9 +30,8 @@ public class CalendarDay {
         this.lunarMonth = lunarMonth;
         this.lunarYear = lunarYear;
         this.isLeapMonth = isLeapMonth;
-        this.canChi = canChi;
+        this.canChi = canChi != null ? canChi : "";
         this.hourCanChi = hourCanChi != null ? hourCanChi : "";
-        this.tietKhi = tietKhi;
         this.isToday = isToday;
         this.isCurrentMonth = isCurrentMonth;
         this.isHoliday = isHoliday;
@@ -42,24 +39,39 @@ public class CalendarDay {
     }
 
     public static CalendarDay fromDate(int year, int month, int day) {
-        LunarCalendarUtil.LunarDate lunarDate = LunarCalendarUtil.getLunarDate(year, month, day);
-        String canChi = LunarCalendarUtil.getCanChiDay(lunarDate.jd);
-        String tietKhi = LunarCalendarUtil.getTietKhi(month, day);
+        try {
+            LunarCalendarUtil.LunarDate lunarDate = LunarCalendarUtil.getLunarDate(year, month, day);
+            String canChi = LunarCalendarUtil.getCanChiDay(lunarDate.jd);
 
-        Calendar today = Calendar.getInstance();
-        boolean isToday = year == today.get(Calendar.YEAR) &&
-                month == today.get(Calendar.MONTH) + 1 &&
-                day == today.get(Calendar.DAY_OF_MONTH);
+            Calendar today = Calendar.getInstance();
+            boolean isToday = year == today.get(Calendar.YEAR) &&
+                    month == today.get(Calendar.MONTH) + 1 &&
+                    day == today.get(Calendar.DAY_OF_MONTH);
 
-        String holiday = getHoliday(day, month, lunarDate.day, lunarDate.month);
+            String holiday = getHoliday(day, month, lunarDate.day, lunarDate.month);
 
-        return new CalendarDay(
-                day, month, year,
-                lunarDate.day, lunarDate.month, lunarDate.year,
-                lunarDate.isLeapMonth, canChi, "",
-                tietKhi, isToday, true,
-                holiday != null, holiday
-        );
+            return new CalendarDay(
+                    day, month, year,
+                    lunarDate.day, lunarDate.month, lunarDate.year,
+                    lunarDate.isLeapMonth, canChi, "",
+                    isToday, true,
+                    holiday != null, holiday
+            );
+        } catch (Exception e) {
+            // Fallback nếu có lỗi
+            Calendar today = Calendar.getInstance();
+            boolean isToday = year == today.get(Calendar.YEAR) &&
+                    month == today.get(Calendar.MONTH) + 1 &&
+                    day == today.get(Calendar.DAY_OF_MONTH);
+
+            return new CalendarDay(
+                    day, month, year,
+                    1, 1, year, // Giá trị mặc định cho lunar
+                    false, "Giáp Tý", "",
+                    isToday, true,
+                    false, null
+            );
+        }
     }
 
     public CalendarDay copyWithCurrentMonth(boolean isCurrentMonth) {
@@ -67,7 +79,7 @@ public class CalendarDay {
                 this.solarDay, this.solarMonth, this.solarYear,
                 this.lunarDay, this.lunarMonth, this.lunarYear,
                 this.isLeapMonth, this.canChi, this.hourCanChi,
-                this.tietKhi, this.isToday, isCurrentMonth,
+                this.isToday, isCurrentMonth,
                 this.isHoliday, this.holidayName
         );
     }
@@ -124,13 +136,11 @@ public class CalendarDay {
                 if (lunarDay == 5) return "Tết Đoan ngọ";
                 break;
             case 7:
+                if (lunarDay == 7) return "Thất tịch";
                 if (lunarDay == 15) return "Lễ Vu lan";
                 break;
             case 8:
                 if (lunarDay == 15) return "Tết Trung thu";
-                break;
-            case 10:
-                if (lunarDay == 10) return "Tết Thất tịch";
                 break;
             case 12:
                 if (lunarDay == 23) return "Ông Táo chầu trời";
@@ -148,5 +158,10 @@ public class CalendarDay {
         return solarDay == that.solarDay &&
                 solarMonth == that.solarMonth &&
                 solarYear == that.solarYear;
+    }
+
+    @Override
+    public int hashCode() {
+        return solarYear * 10000 + solarMonth * 100 + solarDay;
     }
 }

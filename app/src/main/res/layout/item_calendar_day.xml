@@ -1,60 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="0dp"
-    android:layout_height="80dp"
-    android:layout_weight="1"
-    android:layout_margin="2dp"
-    app:cardCornerRadius="8dp"
-    app:cardElevation="2dp"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_margin="4dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="3dp"
     android:clickable="true"
     android:focusable="true"
-    android:foreground="?android:attr/selectableItemBackground">
+    android:foreground="?attr/selectableItemBackground">
 
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="45dp"
+        android:layout_height="60dp"
         android:orientation="vertical"
         android:gravity="center"
-        android:padding="4dp">
+        android:padding="6dp">
 
-        <!-- Solar Date -->
+        <!-- Ngày dương lịch -->
         <TextView
             android:id="@+id/tvSolarDay"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="22"
-            android:textSize="16sp"
+            android:textSize="22sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary" />
 
-        <!-- Lunar Date -->
+        <!-- Ngày âm lịch -->
         <TextView
             android:id="@+id/tvLunarDay"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="25"
+            android:text="25/4"
             android:textSize="10sp"
             android:textColor="@color/text_secondary" />
 
-        <!-- Holiday Indicator -->
+        <!-- Chỉ báo ngày lễ -->
         <View
             android:id="@+id/viewHolidayIndicator"
-            android:layout_width="6dp"
-            android:layout_height="6dp"
-            android:layout_marginTop="2dp"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:layout_marginTop="4dp"
             android:background="@drawable/circle_indicator"
             android:visibility="gone" />
 
-        <!-- Can Chi (only for special days) -->
+        <!-- Can Chi -->
         <TextView
             android:id="@+id/tvCanChi"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="1dp"
-            android:text=""
-            android:textSize="8sp"
+            android:layout_marginTop="2dp"
+            android:text="Giáp Thìn"
+            android:textSize="10sp"
             android:textColor="@color/accent_color"
             android:visibility="gone"
             android:maxLines="1"
