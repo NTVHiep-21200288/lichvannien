@@ -12,8 +12,9 @@ public class NotificationReceiver extends BroadcastReceiver {
         int eventId = intent.getIntExtra("eventId", 0);
         String eventTitle = intent.getStringExtra("eventTitle");
         long eventDate = intent.getLongExtra("eventDate", 0);
+        String reminderText = intent.getStringExtra("reminderText");
 
         NotificationHelper notificationHelper = new NotificationHelper(context);
-        notificationHelper.showNotification(eventId, eventTitle, eventDate);
+        notificationHelper.showNotification(eventId, eventTitle, eventDate, reminderText);
     }
 }

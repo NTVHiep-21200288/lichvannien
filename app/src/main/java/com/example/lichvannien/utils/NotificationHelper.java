@@ -13,6 +13,8 @@ import androidx.core.app.NotificationCompat;
 import com.example.lichvannien.R;
 import com.example.lichvannien.model.Event;
 import com.example.lichvannien.receivers.NotificationReceiver;
+import com.example.lichvannien.notification.OngoingEventNotification;
+import com.example.lichvannien.notification.UpcomingEventNotification;
 
 import java.util.Calendar;
 
@@ -42,22 +44,21 @@ public class NotificationHelper {
         }
     }
 
-    public void scheduleNotification(Event event) {
+    public void scheduleNotification(Event event, String reminderText) {
         Intent intent = new Intent(context, NotificationReceiver.class);
         intent.putExtra("eventId", event.getId());
         intent.putExtra("eventTitle", event.getTitle());
         intent.putExtra("eventDate", event.getDate());
+        intent.putExtra("reminderText", reminderText);
 
         PendingIntent pendingIntent = PendingIntent.getBroadcast(
                 context,
-                (int) event.getId(), // Cast to int
+                (int) event.getId(),
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        
-        // Đặt thông báo trước sự kiện 15 phút
         Calendar calendar = Calendar.getInstance();
         try {
             java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
@@ -67,8 +68,39 @@ public class NotificationHelper {
             e.printStackTrace();
             return;
         }
-        calendar.add(Calendar.MINUTE, -15);
-
+        // Nếu là "Khi sự kiện diễn ra" thì set đúng giờ bắt đầu sự kiện
+        if (reminderText != null && "Khi sự kiện diễn ra".equals(reminderText)) {
+            if (!event.isAllDay() && event.getStartTime() != null && !event.getStartTime().isEmpty()) {
+                try {
+                    String[] hm = event.getStartTime().split(":");
+                    int hour = Integer.parseInt(hm[0]);
+                    int minute = Integer.parseInt(hm[1]);
+                    calendar.set(Calendar.HOUR_OF_DAY, hour);
+                    calendar.set(Calendar.MINUTE, minute);
+                } catch (Exception ex) {
+                    // Nếu lỗi thì giữ nguyên 00:00
+                }
+            } else {
+                // All day event: giữ nguyên 00:00
+                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                calendar.set(Calendar.MINUTE, 0);
+            }
+        } else if (reminderText != null) {
+            switch (reminderText) {
+                case "15 phút trước":
+                    calendar.add(Calendar.MINUTE, -15);
+                    break;
+                case "30 phút trước":
+                    calendar.add(Calendar.MINUTE, -30);
+                    break;
+                case "1 giờ trước":
+                    calendar.add(Calendar.HOUR_OF_DAY, -1);
+                    break;
+                case "1 ngày trước":
+                    calendar.add(Calendar.DAY_OF_MONTH, -1);
+                    break;
+            }
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             alarmManager.setExactAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
@@ -84,14 +116,13 @@ public class NotificationHelper {
         }
     }
 
-    public void showNotification(int eventId, String title, long eventDate) {
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(title)
-                .setContentText("Sự kiện sẽ diễn ra trong 15 phút nữa")
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setAutoCancel(true);
-
-        notificationManager.notify(eventId, builder.build());
+    public void showNotification(int eventId, String title, long eventDate, String reminderText) {
+        android.app.Notification notification;
+        if ("Khi sự kiện diễn ra".equals(reminderText)) {
+            notification = OngoingEventNotification.build(context, title);
+        } else {
+            notification = UpcomingEventNotification.build(context, title);
+        }
+        notificationManager.notify(eventId, notification);
     }
 }

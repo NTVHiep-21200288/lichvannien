@@ -260,8 +260,7 @@ public class AddEventActivity extends AppCompatActivity {
         if (eventId != -1) {
             event.setId((int) eventId);
             // Lên lịch thông báo cho sự kiện
-            notificationHelper.scheduleNotification(event);
-            
+            notificationHelper.scheduleNotification(event, reminder);
             // Set result và kết thúc Activity
             Intent resultIntent = new Intent();
             resultIntent.putExtra("EVENT_ADDED", true);

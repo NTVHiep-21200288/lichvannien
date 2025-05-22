@@ -23,6 +23,7 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHol
 
     private List<Event> events = new ArrayList<>();
     private Context context;
+    private OnEventClickListener onEventClickListener;
 
     public EventAdapter(Context context) {
         this.context = context;
@@ -43,6 +44,11 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHol
     public void onBindViewHolder(@NonNull EventViewHolder holder, int position) {
         Event event = events.get(position);
         holder.bind(event);
+        holder.itemView.setOnClickListener(v -> {
+            if (onEventClickListener != null) {
+                onEventClickListener.onEventClick(event);
+            }
+        });
     }
 
     @Override
@@ -56,6 +62,10 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHol
             this.events.addAll(newEvents);
         }
         notifyDataSetChanged();
+    }
+
+    public void setOnEventClickListener(OnEventClickListener listener) {
+        this.onEventClickListener = listener;
     }
 
     class EventViewHolder extends RecyclerView.ViewHolder {
@@ -133,5 +143,9 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHol
             viewEventTypeIndicator.setBackgroundColor(color);
             ivEventType.setImageResource(iconRes);
         }
+    }
+
+    public interface OnEventClickListener {
+        void onEventClick(Event event);
     }
 }

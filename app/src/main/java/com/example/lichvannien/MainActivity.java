@@ -68,10 +68,49 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
         setupClickListeners();
         startRealtimeUpdate();
 
+        // Thêm listener cho adapter sự kiện
+        currentEventsAdapter.setOnEventClickListener((event) -> showEventOptionsDialog(event));
+        selectedEventsAdapter.setOnEventClickListener((event) -> showEventOptionsDialog(event));
+
         // Load current month
         Calendar today = Calendar.getInstance();
         viewModel.loadMonth(today.get(Calendar.YEAR), today.get(Calendar.MONTH) + 1);
-    }    private void initViews() {
+    }
+
+    private void showEventOptionsDialog(Event event) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(event.getTitle())
+            .setItems(new CharSequence[]{"Chỉnh sửa", "Xóa"}, (dialog, which) -> {
+                if (which == 0) {
+                    // Chỉnh sửa sự kiện
+                    Intent intent = new Intent(MainActivity.this, AddEventActivity.class);
+                    intent.putExtra("EDIT_EVENT_ID", event.getId());
+                    // Có thể truyền thêm các thông tin khác nếu cần
+                    startActivity(intent);
+                } else if (which == 1) {
+                    // Xóa sự kiện
+                    new androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setTitle("Xác nhận xóa")
+                        .setMessage("Bạn có chắc muốn xóa sự kiện này?")
+                        .setPositiveButton("Xóa", (d, w) -> {
+                            EventDbHelper dbHelper = new EventDbHelper(this);
+                            dbHelper.deleteEvent(event.getId());
+                            // Refresh lại danh sách sự kiện
+                            CalendarDay selectedDay = viewModel.getSelectedDay().getValue();
+                            if (selectedDay != null) {
+                                loadEventsForSelectedDay(selectedDay.solarYear, selectedDay.solarMonth, selectedDay.solarDay);
+                                loadEventsForCurrentDay(selectedDay.solarYear, selectedDay.solarMonth, selectedDay.solarDay);
+                            }
+                        })
+                        .setNegativeButton("Hủy", null)
+                        .show();
+                }
+            })
+            .setNegativeButton("Đóng", null)
+            .show();
+    }
+
+    private void initViews() {
         tvCurrentDate = findViewById(R.id.tvCurrentDate);
         tvLunarDate = findViewById(R.id.tvLunarDate);
         tvCanChi = findViewById(R.id.tvCanChi);
