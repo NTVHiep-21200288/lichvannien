@@ -1,27 +1,36 @@
 package com.example.lichvannien;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.lichvannien.adapter.CalendarAdapter;
+import com.example.lichvannien.adapter.EventAdapter;
 import com.example.lichvannien.model.CalendarDay;
 import com.example.lichvannien.model.CalendarMonth;
 import com.example.lichvannien.utils.LunarCalendarUtil;
 import com.example.lichvannien.viewmodel.CalendarViewModel;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Locale;
+import com.example.lichvannien.database.EventDbHelper;
+import com.example.lichvannien.model.Event;
+import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements CalendarAdapter.OnDayClickListener {
-
+public class MainActivity extends AppCompatActivity implements CalendarAdapter.OnDayClickListener {    private static final int ADD_EVENT_REQUEST_CODE = 1001;
+    
     private CalendarViewModel viewModel;
     private CalendarAdapter calendarAdapter;
+    private EventAdapter currentEventsAdapter;
+    private EventAdapter selectedEventsAdapter;
     private Handler handler = new Handler(Looper.getMainLooper());
     private Runnable timeUpdateRunnable;
 
@@ -29,16 +38,24 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
     private TextView tvCurrentDate;
     private TextView tvLunarDate;
     private TextView tvCanChi;
-    private TextView tvTietKhi;
     private TextView tvMonthYear;
     private TextView tvSelectedDate;
     private TextView tvSelectedLunar;
-    private TextView tvSelectedCanChi;
+    private TextView tvSelectedCanChi;    
     private TextView tvSelectedHoliday;
     private RecyclerView rvCalendar;
     private ImageButton btnPrevMonth;
     private ImageButton btnNextMonth;
     private ImageButton btnToday;
+    private FloatingActionButton fabAddEvent;
+    
+    // Event views
+    private TextView tvCurrentEventsHeader;
+    private RecyclerView rvCurrentEvents;
+    private TextView tvNoCurrentEvents;
+    private TextView tvSelectedEventsHeader;
+    private RecyclerView rvSelectedEvents;
+    private TextView tvNoSelectedEvents;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,13 +71,10 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
         // Load current month
         Calendar today = Calendar.getInstance();
         viewModel.loadMonth(today.get(Calendar.YEAR), today.get(Calendar.MONTH) + 1);
-    }
-
-    private void initViews() {
+    }    private void initViews() {
         tvCurrentDate = findViewById(R.id.tvCurrentDate);
         tvLunarDate = findViewById(R.id.tvLunarDate);
         tvCanChi = findViewById(R.id.tvCanChi);
-        tvTietKhi = findViewById(R.id.tvTietKhi);
         tvMonthYear = findViewById(R.id.tvMonthYear);
         tvSelectedDate = findViewById(R.id.tvSelectedDate);
         tvSelectedLunar = findViewById(R.id.tvSelectedLunar);
@@ -70,6 +84,25 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
         btnPrevMonth = findViewById(R.id.btnPrevMonth);
         btnNextMonth = findViewById(R.id.btnNextMonth);
         btnToday = findViewById(R.id.btnToday);
+        fabAddEvent = findViewById(R.id.fabAddEvent);
+        
+        // Event views
+        tvCurrentEventsHeader = findViewById(R.id.tvCurrentEventsHeader);
+        rvCurrentEvents = findViewById(R.id.rvCurrentEvents);
+        tvNoCurrentEvents = findViewById(R.id.tvNoCurrentEvents);
+        tvSelectedEventsHeader = findViewById(R.id.tvSelectedEventsHeader);
+        rvSelectedEvents = findViewById(R.id.rvSelectedEvents);
+        tvNoSelectedEvents = findViewById(R.id.tvNoSelectedEvents);
+        
+        // Setup event adapters
+        currentEventsAdapter = new EventAdapter(this);
+        selectedEventsAdapter = new EventAdapter(this);
+        
+        // Setup event RecyclerViews
+        EventAdapter.setupLinearLayoutManager(rvCurrentEvents);
+        EventAdapter.setupLinearLayoutManager(rvSelectedEvents);
+        rvCurrentEvents.setAdapter(currentEventsAdapter);
+        rvSelectedEvents.setAdapter(selectedEventsAdapter);
     }
 
     private void setupViewModel() {
@@ -77,12 +110,16 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
 
         viewModel.getCurrentMonth().observe(this, this::onMonthChanged);
         viewModel.getSelectedDay().observe(this, this::onDaySelected);
-    }
-
-    private void onMonthChanged(CalendarMonth calendarMonth) {
+    }    private void onMonthChanged(CalendarMonth calendarMonth) {
         if (calendarMonth != null) {
+            android.util.Log.d("MainActivity", "Month changed: " + calendarMonth.month + "/" + calendarMonth.year + " with " + calendarMonth.days.size() + " days");
             calendarAdapter.updateData(calendarMonth.days);
             updateMonthYearDisplay(calendarMonth.year, calendarMonth.month);
+            
+            // Load events for this month
+            loadEventsForMonth(calendarMonth.year, calendarMonth.month);
+        } else {
+            android.util.Log.e("MainActivity", "CalendarMonth is null");
         }
     }
 
@@ -97,9 +134,7 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
         calendarAdapter = new CalendarAdapter(this);
         CalendarAdapter.setupGridLayoutManager(rvCalendar);
         rvCalendar.setAdapter(calendarAdapter);
-    }
-
-    private void setupClickListeners() {
+    }    private void setupClickListeners() {
         btnPrevMonth.setOnClickListener(v -> viewModel.navigateToPreviousMonth());
 
         btnNextMonth.setOnClickListener(v -> viewModel.navigateToNextMonth());
@@ -113,6 +148,19 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
                     today.get(Calendar.DAY_OF_MONTH)
             );
             viewModel.selectDay(todayCalendarDay);
+        });
+          fabAddEvent.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, AddEventActivity.class);
+            
+            // Truyền ngày đã chọn hiện tại (nếu có)
+            CalendarDay selectedDay = viewModel.getSelectedDay().getValue();
+            if (selectedDay != null) {
+                intent.putExtra("YEAR", selectedDay.solarYear);
+                intent.putExtra("MONTH", selectedDay.solarMonth);
+                intent.putExtra("DAY", selectedDay.solarDay);
+            }
+            
+            startActivityForResult(intent, ADD_EVENT_REQUEST_CODE);
         });
     }
 
@@ -130,9 +178,7 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
             }
         };
         handler.post(timeUpdateRunnable);
-    }
-
-    private void updateCurrentDateDisplay() {
+    }    private void updateCurrentDateDisplay() {
         Calendar now = Calendar.getInstance();
         int year = now.get(Calendar.YEAR);
         int month = now.get(Calendar.MONTH) + 1;
@@ -151,15 +197,6 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
         String canChiDay = LunarCalendarUtil.getCanChiDay(lunarDate.jd);
         tvCanChi.setText("Ngày " + canChiDay);
 
-        // Get Tiet Khi
-        String tietKhi = LunarCalendarUtil.getTietKhi(month, day);
-        if (tietKhi != null) {
-            tvTietKhi.setText("Tiết khí: " + tietKhi);
-            tvTietKhi.setVisibility(View.VISIBLE);
-        } else {
-            tvTietKhi.setVisibility(View.GONE);
-        }
-
         // Get hour Can Chi
         int hour = now.get(Calendar.HOUR_OF_DAY);
         String hourCanChi = LunarCalendarUtil.getHourCanChi(hour, canChiDay);
@@ -169,6 +206,9 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
         if (selectedDay != null && selectedDay.isToday) {
             updateSelectedDayInfo(selectedDay, hourCanChi);
         }
+        
+        // Load events for current day
+        loadEventsForCurrentDay(year, month, day);
     }
 
     private void updateMonthYearDisplay(int year, int month) {
@@ -177,9 +217,7 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
                 "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"
         };
         tvMonthYear.setText(monthNames[month] + ", " + year);
-    }
-
-    private void updateSelectedDayInfo(CalendarDay day, String hourCanChi) {
+    }    private void updateSelectedDayInfo(CalendarDay day, String hourCanChi) {
         // Main date info
         String dateText = "Thứ " + getDayOfWeek(day.solarYear, day.solarMonth, day.solarDay) + ", " +
                 "ngày " + day.solarDay + " tháng " + day.solarMonth + " năm " + day.solarYear;
@@ -211,16 +249,9 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
         } else {
             tvSelectedHoliday.setVisibility(View.GONE);
         }
-
-        // Tiet Khi info
-        if (day.tietKhi != null) {
-            if (tvSelectedHoliday.getVisibility() == View.VISIBLE) {
-                tvSelectedHoliday.setText(tvSelectedHoliday.getText() + "\n🌸 Tiết khí: " + day.tietKhi);
-            } else {
-                tvSelectedHoliday.setText("🌸 Tiết khí: " + day.tietKhi);
-                tvSelectedHoliday.setVisibility(View.VISIBLE);
-            }
-        }
+        
+        // Load events for selected day
+        loadEventsForSelectedDay(day.solarYear, day.solarMonth, day.solarDay);
     }
 
     private String getDayOfWeek(int year, int month, int day) {
@@ -260,6 +291,146 @@ public class MainActivity extends AppCompatActivity implements CalendarAdapter.O
         super.onDestroy();
         if (timeUpdateRunnable != null) {
             handler.removeCallbacks(timeUpdateRunnable);
+        }
+    }    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        
+        if (requestCode == ADD_EVENT_REQUEST_CODE && resultCode == RESULT_OK) {
+            if (data != null && data.getBooleanExtra("EVENT_ADDED", false)) {
+                // Lấy thông tin ngày của sự kiện vừa thêm
+                int year = data.getIntExtra("YEAR", -1);
+                int month = data.getIntExtra("MONTH", -1);
+                int day = data.getIntExtra("DAY", -1);
+                
+                if (year > 0 && month > 0 && day > 0) {
+                    // Thông báo thành công
+                    Toast.makeText(this, "Đã thêm sự kiện vào ngày " + day + "/" + month + "/" + year, Toast.LENGTH_SHORT).show();
+                    
+                    // Cập nhật lại tháng hiện tại để hiển thị các sự kiện mới
+                    CalendarMonth currentMonth = viewModel.getCurrentMonth().getValue();
+                    if (currentMonth != null) {
+                        loadEventsForMonth(currentMonth.year, currentMonth.month);
+                    }
+                    
+                    // Chọn ngày có sự kiện vừa thêm
+                    CalendarDay eventDay = CalendarDay.fromDate(year, month, day);
+                    viewModel.selectDay(eventDay);
+                      // Cập nhật danh sách sự kiện của ngày được chọn
+                    loadEventsForSelectedDay(year, month, day);
+                    
+                    // Cập nhật danh sách sự kiện hiện tại nếu sự kiện được thêm vào ngày hôm nay
+                    Calendar now = Calendar.getInstance();
+                    int todayYear = now.get(Calendar.YEAR);
+                    int todayMonth = now.get(Calendar.MONTH) + 1;
+                    int todayDay = now.get(Calendar.DAY_OF_MONTH);
+                    
+                    if (year == todayYear && month == todayMonth && day == todayDay) {
+                        loadEventsForCurrentDay(todayYear, todayMonth, todayDay);
+                    }
+                }
+            }
+        }
+    }
+    
+    private void loadEventsForMonth(int year, int month) {
+        // Create EventDbHelper
+        EventDbHelper dbHelper = new EventDbHelper(this);
+        
+        // Create a map to store events by day
+        List<CalendarDay> days = calendarAdapter.getDays();
+        if (days == null || days.isEmpty()) {
+            return;
+        }
+        
+        // Get current calendar month
+        CalendarMonth currentMonth = viewModel.getCurrentMonth().getValue();
+        if (currentMonth == null) {
+            return;
+        }
+        
+        // Get all events for this month
+        List<Event> monthEvents = dbHelper.getEventsByMonth(year, month);
+        
+        // Mark days with events
+        boolean hasUpdates = false;
+        for (CalendarDay day : days) {
+            boolean hadEvents = day.hasEvents;
+            day.hasEvents = false;
+            
+            // Check if this day has events
+            for (Event event : monthEvents) {
+                if (event.getYear() == day.solarYear && 
+                    event.getMonth() == day.solarMonth && 
+                    event.getDay() == day.solarDay) {
+                    day.hasEvents = true;
+                    break;
+                }
+            }
+            
+            // Track if anything changed
+            if (hadEvents != day.hasEvents) {
+                hasUpdates = true;
+            }
+        }
+        
+        // Update UI if needed
+        if (hasUpdates) {
+            calendarAdapter.notifyDataSetChanged();
+        }
+    }
+    
+    /**
+     * Loads and displays events for the current day
+     */
+    private void loadEventsForCurrentDay(int year, int month, int day) {
+        // Create EventDbHelper
+        EventDbHelper dbHelper = new EventDbHelper(this);
+        
+        // Get events for the current day
+        List<Event> todayEvents = dbHelper.getEventsByDate(year, month, day);
+        
+        // Update UI based on whether there are events
+        if (todayEvents != null && !todayEvents.isEmpty()) {
+            // Show header and RecyclerView
+            tvCurrentEventsHeader.setVisibility(View.VISIBLE);
+            rvCurrentEvents.setVisibility(View.VISIBLE);
+            tvNoCurrentEvents.setVisibility(View.GONE);
+            
+            // Update adapter with events
+            currentEventsAdapter.updateData(todayEvents);
+        } else {
+            // Show "no events" message
+            tvCurrentEventsHeader.setVisibility(View.VISIBLE);
+            rvCurrentEvents.setVisibility(View.GONE);
+            tvNoCurrentEvents.setVisibility(View.VISIBLE);
+        }
+    }
+    
+    /**
+     * Loads and displays events for the selected day
+     */
+    private void loadEventsForSelectedDay(int year, int month, int day) {
+        // Create EventDbHelper
+        EventDbHelper dbHelper = new EventDbHelper(this);
+        
+        // Get events for the selected day
+        List<Event> selectedDayEvents = dbHelper.getEventsByDate(year, month, day);
+        
+        // Update UI based on whether there are events
+        if (selectedDayEvents != null && !selectedDayEvents.isEmpty()) {
+            // Show header and RecyclerView
+            tvSelectedEventsHeader.setVisibility(View.VISIBLE);
+            rvSelectedEvents.setVisibility(View.VISIBLE);
+            tvNoSelectedEvents.setVisibility(View.GONE);
+            
+            // Update adapter with events
+            selectedEventsAdapter.updateData(selectedDayEvents);
+        } else {
+            // Show "no events" message
+            tvSelectedEventsHeader.setVisibility(View.VISIBLE);
+            rvSelectedEvents.setVisibility(View.GONE);
+            tvNoSelectedEvents.setVisibility(View.VISIBLE);
         }
     }
 }
